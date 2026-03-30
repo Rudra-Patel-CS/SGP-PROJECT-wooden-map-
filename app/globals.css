@@ -1,0 +1,246 @@
+@import "tailwindcss";
+
+/* ===============================
+   DESIGN TOKENS
+   =============================== */
+
+:root {
+
+  --radius: 0.9rem;
+
+  --background: #fffaf3;
+  --foreground: #3b2412;
+
+  --card: #ffffff;
+  --card-foreground: #3b2412;
+
+  --primary: #4a2c14;
+  --primary-foreground: #fffaf3;
+
+  --secondary: #f3ebe2;
+  --secondary-foreground: #3b2412;
+
+  --accent: #9b7b65;
+  --accent-foreground: #fffaf3;
+
+  --muted: #f3ebe2;
+  --muted-foreground: #7a5a46;
+
+  --border: #e6dcd0;
+  --input: #e6dcd0;
+  --ring: #9b7b65;
+
+  --shadow-soft: 0 8px 30px rgba(74, 44, 20, 0.08);
+  --shadow-md: 0 18px 60px rgba(74, 44, 20, 0.12);
+  --shadow-lg: 0 30px 90px rgba(74, 44, 20, 0.18);
+}
+
+/* ===============================
+   BASE LAYER
+   =============================== */
+
+@layer base {
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Ultra smooth transitions for all interactive elements */
+  button,
+  a,
+  input,
+  textarea,
+  select,
+  [role="button"],
+  label {
+    transition: all 0.9s ease-in-out;
+  }
+
+  /* Ultra smooth transitions for cards */
+  div[class*="card"],
+  div[class*="Card"],
+  [class*="rounded"] {
+    transition: box-shadow 0.9s ease-in-out,
+      transform 0.9s ease-in-out,
+      background-color 0.9s ease-in-out;
+  }
+
+  /* Ultra smooth transitions for images */
+  img {
+    transition: transform 1s ease-in-out,
+      opacity 0.9s ease-in-out,
+      filter 0.9s ease-in-out;
+  }
+
+  /* Ultra smooth transitions for SVG icons */
+  svg {
+    transition: transform 0.9s ease-in-out,
+      color 0.9s ease-in-out,
+      fill 0.9s ease-in-out,
+      stroke 0.9s ease-in-out;
+  }
+
+  /* Ultra smooth transitions for backgrounds and colors */
+  [class*="bg-"],
+  [class*="text-"],
+  [class*="border-"] {
+    transition: background-color 0.9s ease-in-out,
+      color 0.9s ease-in-out,
+      border-color 0.9s ease-in-out;
+  }
+
+  /* Ultra smooth transitions for opacity changes */
+  [class*="opacity-"],
+  [class*="hover:opacity-"] {
+    transition: opacity 0.9s ease-in-out;
+  }
+
+  /* Ultra smooth transitions for scale and transform */
+  [class*="scale-"],
+  [class*="hover:scale-"],
+  [class*="translate-"],
+  [class*="hover:translate-"] {
+    transition: transform 1s ease-in-out;
+  }
+
+  /* Ultra smooth transitions for shadows */
+  [class*="shadow"] {
+    transition: box-shadow 0.9s ease-in-out;
+  }
+
+  /* Smooth page transitions */
+  main,
+  section,
+  article {
+    transition: opacity 0.8s ease-in-out;
+  }
+
+}
+
+/* ===============================
+   PREMIUM ANIMATION SYSTEM
+   =============================== */
+
+/* --- Layout --- */
+
+.wml-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #f5ebe0, #e6dcd0 40%, #c49a6c);
+  overflow: hidden;
+}
+
+.wml-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255, 230, 200, 0.4) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.wml-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  z-index: 10;
+}
+
+/* --- Frame & SVG --- */
+
+.wml-frame-wrapper {
+  width: 280px;
+}
+
+@media (min-width: 640px) {
+  .wml-frame-wrapper {
+    width: 480px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .wml-frame-wrapper {
+    width: 600px;
+  }
+}
+
+.wml-svg {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 12px 32px rgba(74, 44, 20, 0.25));
+}
+
+/* --- Shimmer Effect --- */
+@keyframes shimmer-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.wml-shimmer {
+  animation: shimmer-sweep 2.5s ease-in-out infinite;
+}
+
+/* --- Particles --- */
+
+.wml-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.wml-particle {
+  position: absolute;
+  bottom: 0;
+  border-radius: 1px;
+  background: #deb887;
+}
+
+/* --- Brand Text --- */
+
+.wml-brand {
+  text-align: center;
+}
+
+.wml-brand-title {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  color: #3b2412;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+.wml-brand-accent {
+  color: #8b5a3c;
+}
+
+.wml-brand-co {
+  font-size: 1.25rem;
+  color: #6b3a1f;
+  font-family: var(--font-sans);
+  font-weight: 300;
+  letter-spacing: 0.1em;
+}
+
+.wml-brand-tagline {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: #8b5a3c;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
