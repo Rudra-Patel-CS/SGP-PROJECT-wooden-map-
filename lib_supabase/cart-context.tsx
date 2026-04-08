@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export interface CartItem {
-  id: number;
+  id: string; // Product UUID from Supabase
   name: string;
   price: number;
   quantity: number;

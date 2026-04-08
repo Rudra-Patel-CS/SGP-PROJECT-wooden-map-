@@ -23,6 +23,8 @@ const playfair = Playfair_Display({
   weight: ["400", "500", "600"],
 });
 
+import { SettingsProvider } from "@/components/settings-context";
+
 export const metadata: Metadata = {
   title: "Aryam Maps",
   description: "Handcrafted wooden maps that bring your walls to life — by Aryam Maps.",
@@ -36,6 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
+        suppressHydrationWarning
         className={`
           ${geistSans.variable}
           ${geistMono.variable}
@@ -44,11 +47,13 @@ export default function RootLayout({
           antialiased
         `}
       >
-        <CartProvider>
-          <PageTransitionProvider>
-            {children}
-          </PageTransitionProvider>
-        </CartProvider>
+        <SettingsProvider>
+          <CartProvider>
+            <PageTransitionProvider>
+              {children}
+            </PageTransitionProvider>
+          </CartProvider>
+        </SettingsProvider>
       </body>
     </html>
   );

@@ -1,0 +1,6 @@
+COLUMN STILL MISSING: {
+  "code": "42703",
+  "details": null,
+  "hint": null,
+  "message": "column site_configs.admin_2fa_secret does not exist"
+}

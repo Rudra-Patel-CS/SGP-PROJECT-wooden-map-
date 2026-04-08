@@ -13,6 +13,8 @@ import { Slider } from "@/components/ui/slider";
 import { Star, SlidersHorizontal, X, ChevronLeft, ChevronRight, ShoppingCart, Zap, Loader2 } from "lucide-react";
 import { useCart } from "@/lib_supabase/cart-context";
 import { createClient } from "@/lib_supabase/supabase/client";
+import { useSettings } from "@/components/settings-context";
+import { formatPrice } from "@/lib_supabase/utils";
 
 interface Product {
   id: string;
@@ -24,6 +26,7 @@ interface Product {
   size: string;
   category: string;
   badge: string | null;
+  created_at: string;
 }
 
 const sizeFilters = [
@@ -39,20 +42,21 @@ const regionFilters = [
   { id: "city", label: "City Maps" },
 ];
 
-const ITEMS_PER_PAGE = 9;
+const ITEMS_PER_PAGE = 12;
 
 export default function ShopPage() {
+  const { settings } = useSettings();
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   // Pending (user is editing) state
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
-  const [tempPriceRange, setTempPriceRange] = useState([0, 50000]);
+  const [tempPriceRange, setTempPriceRange] = useState([0, 200000]);
 
   // Applied (used for actual filtering) state
   const [appliedSizes, setAppliedSizes] = useState<string[]>([]);
   const [appliedRegions, setAppliedRegions] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState([0, 50000]);
+  const [priceRange, setPriceRange] = useState([0, 200000]);
 
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,6 +72,12 @@ export default function ShopPage() {
         if (res.ok) {
           const data = await res.json();
           setProducts(data);
+          
+          // Dynamically set max price based on actual inventory
+          const actualMaxProductPrice = Math.max(...data.map((p: any) => p.price), 0);
+          const filterMax = Math.max(actualMaxProductPrice, 200000);
+          setTempPriceRange([0, filterMax]);
+          setPriceRange([0, filterMax]);
         }
       } catch (err) {
         console.error('Failed to fetch products:', err);
@@ -159,7 +169,7 @@ export default function ShopPage() {
     tempPriceRange[1] !== priceRange[1];
 
   const hasActiveFilters =
-    appliedSizes.length > 0 || appliedRegions.length > 0 || priceRange[0] > 0 || priceRange[1] < 50000;
+    appliedSizes.length > 0 || appliedRegions.length > 0 || priceRange[0] > 0 || priceRange[1] < 1000000;
 
   const checkAuthAndRun = async (e: React.MouseEvent, callback: () => void) => {
     e.preventDefault();
@@ -175,7 +185,7 @@ export default function ShopPage() {
   const handleAddToCart = (e: React.MouseEvent, product: Product) => {
     checkAuthAndRun(e, () => {
       addToCart({
-        id: parseInt(product.id) || Date.now(),
+        id: product.id,
         name: product.name,
         price: product.price,
         quantity: 1,
@@ -192,7 +202,7 @@ export default function ShopPage() {
   const handleBuyNow = (e: React.MouseEvent, product: Product) => {
     checkAuthAndRun(e, () => {
       addToCart({
-        id: parseInt(product.id) || Date.now(),
+        id: product.id,
         name: product.name,
         price: product.price,
         quantity: 1,
@@ -242,7 +252,7 @@ export default function ShopPage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-foreground">Price Range</h3>
-          {(tempPriceRange[0] > 0 || tempPriceRange[1] < 50000) && (
+          {(tempPriceRange[0] > 0 || tempPriceRange[1] < 1000000) && (
             <button
               onClick={() => setTempPriceRange([0, 50000])}
               className="text-xs text-[#8b5a3c] hover:text-[#6d4830] transition-colors"
@@ -254,19 +264,19 @@ export default function ShopPage() {
         <div className="px-2 pt-4 pb-2">
           <Slider
             min={0}
-            max={50000}
-            step={100}
+            max={1000000}
+            step={1000}
             value={tempPriceRange}
             onValueChange={setTempPriceRange}
           />
         </div>
         <div className="flex items-center justify-between mt-4">
           <div className="bg-white border border-[#d4b896] rounded px-3 py-1.5 text-sm w-24 text-center">
-            ₹{tempPriceRange[0]}
+            {formatPrice(tempPriceRange[0], settings.currency)}
           </div>
           <span className="text-muted-foreground">-</span>
           <div className="bg-white border border-[#d4b896] rounded px-3 py-1.5 text-sm w-24 text-center">
-            {tempPriceRange[1] >= 50000 ? '₹50,000+' : `₹${tempPriceRange[1]}`}
+            {tempPriceRange[1] >= 1000000 ? `${formatPrice(1000000, settings.currency)}+` : formatPrice(tempPriceRange[1], settings.currency)}
           </div>
         </div>
       </div>
@@ -378,11 +388,27 @@ export default function ShopPage() {
                               <span className="text-sm">No Image</span>
                             </div>
                           )}
-                          {product.badge && (
-                            <span className="absolute top-3 left-3 bg-accent text-accent-foreground text-xs font-medium px-3 py-1 rounded-full">
-                              {product.badge}
-                            </span>
-                          )}
+                          {(() => {
+                            const isNew = (date: string) => {
+                              const created = new Date(date).getTime();
+                              const now = new Date().getTime();
+                              return (now - created) < (48 * 60 * 60 * 1000); // 48 hours
+                            };
+                            if (isNew(product.created_at)) {
+                              return (
+                                <span className="absolute top-3 left-3 bg-[#8b5a3c] text-white text-[10px] uppercase font-bold px-2.5 py-1 rounded-full shadow-sm z-10">
+                                  New Arrival
+                                </span>
+                              );
+                            } else if (product.badge) {
+                              return (
+                                <span className="absolute top-3 left-3 bg-accent text-accent-foreground text-xs font-medium px-3 py-1 rounded-full z-10">
+                                  {product.badge}
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                         <div className="flex items-center gap-1 mb-2">
                           <Star className="w-4 h-4 fill-accent text-accent" />
@@ -392,7 +418,7 @@ export default function ShopPage() {
                         <h3 className="font-medium text-foreground group-hover:text-accent transition-colors">
                           {product.name}
                         </h3>
-                        <p className="text-lg font-semibold text-foreground mt-1">₹{product.price}</p>
+                        <p className="text-lg font-semibold text-foreground mt-1">{formatPrice(product.price, settings.currency)}</p>
                       </Link>
                       <div className="flex gap-2 mt-3">
                         <Button

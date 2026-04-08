@@ -23,6 +23,8 @@ export default function AuthPage() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [is2FARequired, setIs2FARequired] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
 
   // Check session on mount → redirect if already logged in
   // Also check if returning user → default to Login tab
@@ -57,13 +59,30 @@ export default function AuthPage() {
       const adminRes = await fetch("/api/admin-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ 
+          email, 
+          password, 
+          twoFactorCode: is2FARequired ? twoFactorCode : undefined 
+        }),
       });
 
       if (adminRes.ok) {
+        const adminData = await adminRes.json();
+        if (adminData.twoFactorRequired) {
+          setIs2FARequired(true);
+          setLoading(false);
+          return;
+        }
         localStorage.setItem("adminAuth", "true");
         localStorage.setItem("adminEmail", email);
         window.location.href = "/admin/dashboard";
+        return;
+      }
+
+      if (is2FARequired) {
+        const errorData = await adminRes.json();
+        setError(errorData.error || "Invalid 2FA code");
+        setLoading(false);
         return;
       }
 
@@ -254,6 +273,20 @@ export default function AuthPage() {
                   {show ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+
+              {is2FARequired && (
+                <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#8b5a3c]">2FA Security Code</label>
+                  <Input
+                    placeholder="Enter 6-digit code"
+                    value={twoFactorCode}
+                    onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="bg-[#f7f1e8] border-[#8b5a3c] h-12 text-center text-2xl tracking-[0.5em] font-mono"
+                    required
+                  />
+                  <p className="text-[10px] text-center text-[#5a3726]/60">Enter the code from your authenticator app</p>
+                </div>
+              )}
 
               {mode === "register" && (
                 <div className="flex items-center gap-2 text-sm text-[#5a3726]">

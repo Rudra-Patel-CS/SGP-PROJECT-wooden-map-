@@ -55,11 +55,11 @@ export async function PUT(
         const body = await req.json();
         const supabase = getServiceClient();
 
-        const updateData: Record<string, unknown> = {};
+        const updateData: Record<string, any> = {};
         if (body.name !== undefined) updateData.name = body.name;
         if (body.description !== undefined) updateData.description = body.description;
-        if (body.price !== undefined) updateData.price = parseFloat(body.price);
-        if (body.stock !== undefined) updateData.stock = parseInt(body.stock);
+        if (body.price !== undefined) updateData.price = parseFloat(body.price) || 0;
+        if (body.stock !== undefined) updateData.stock = parseInt(body.stock) || 0;
         if (body.category !== undefined) updateData.category = body.category;
         if (body.size !== undefined) updateData.size = body.size;
         if (body.badge !== undefined) updateData.badge = body.badge || null;
@@ -68,6 +68,7 @@ export async function PUT(
         if (body.features !== undefined) updateData.features = body.features;
         if (body.specifications !== undefined) updateData.specifications = body.specifications;
         if (body.is_active !== undefined) updateData.is_active = body.is_active;
+        if (body.featured !== undefined) updateData.featured = body.featured;
 
         const { data, error } = await supabase
             .from("products")
@@ -86,7 +87,7 @@ export async function PUT(
     }
 }
 
-// DELETE /api/products/[id] — admin soft-deletes a product
+// DELETE /api/products/[id] — admin deletes or soft-deletes a product
 export async function DELETE(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -98,19 +99,33 @@ export async function DELETE(
         }
 
         const { id } = await params;
+        const { searchParams } = new URL(req.url);
+        const permanent = searchParams.get("permanent") === "true";
         const supabase = getServiceClient();
 
-        // Soft delete: set is_active = false
-        const { error } = await supabase
-            .from("products")
-            .update({ is_active: false })
-            .eq("id", id);
+        if (permanent) {
+            // Hard delete: completely remove from database
+            const { error } = await supabase
+                .from("products")
+                .delete()
+                .eq("id", id);
 
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            if (error) {
+                return NextResponse.json({ error: error.message }, { status: 500 });
+            }
+        } else {
+            // Soft delete: set is_active = false
+            const { error } = await supabase
+                .from("products")
+                .update({ is_active: false })
+                .eq("id", id);
+
+            if (error) {
+                return NextResponse.json({ error: error.message }, { status: 500 });
+            }
         }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, permanent });
     } catch {
         return NextResponse.json({ error: "Failed to delete product" }, { status: 500 });
     }

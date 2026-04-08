@@ -12,6 +12,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useSettings } from "@/components/settings-context";
 import { Search, Package, Truck, Paintbrush, HelpCircle, Mail } from "lucide-react";
 
 const faqCategories = [
@@ -146,6 +147,7 @@ const faqCategories = [
 ];
 
 export default function FAQPage() {
+  const { settings } = useSettings();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -302,9 +304,9 @@ export default function FAQPage() {
                   <Link href="/contact">Contact Support</Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
-                  <a href="mailto:support@aryammaps.com">
+                  <a href={`mailto:${settings.support_email}`}>
                     <Mail className="mr-2 h-4 w-4" />
-                    support@aryammaps.com
+                    {settings.support_email}
                   </a>
                 </Button>
               </div>
@@ -329,18 +331,6 @@ export default function FAQPage() {
                 </h3>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Explore our collection
-                </p>
-              </Link>
-              <Link
-                href="/customize"
-                className="group rounded-lg border border-border bg-background p-6 text-center transition-shadow hover:shadow-md"
-              >
-                <Paintbrush className="mx-auto h-8 w-8 text-primary" />
-                <h3 className="mt-4 font-medium text-foreground group-hover:text-primary">
-                  Customize a Map
-                </h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Design your own
                 </p>
               </Link>
               <Link

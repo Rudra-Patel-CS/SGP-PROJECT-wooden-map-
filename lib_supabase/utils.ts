@@ -4,3 +4,8 @@ import { twMerge } from "tailwind-merge"
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+export function formatPrice(price: number, currency: string = "INR") {
+  const symbol = currency === "USD" ? "$" : "₹";
+  return `${symbol}${Number(price).toLocaleString()}`;
+}

@@ -86,7 +86,7 @@ export default function CustomizePage() {
 
   const handleAddToCart = () => {
     addToCart({
-      id: Date.now(), // Generate unique ID for custom map
+      id: `custom-${Date.now()}`, // Generate unique ID for custom map
       name: `Custom ${selectedMapType.label}`,
       price: totalPrice,
       quantity: 1,

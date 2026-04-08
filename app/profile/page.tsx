@@ -23,22 +23,46 @@ export default function ProfilePage() {
 
     useEffect(() => {
         const supabase = createClient();
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        
+        const fetchProfile = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            
             if (session?.user) {
+                // 1. Get basic info from Auth Session
                 const meta = session.user.user_metadata;
-                setUser({
+                const baseProfile = {
                     email: session.user.email ?? "",
                     firstName: meta?.first_name ?? meta?.full_name?.split(" ")[0] ?? "",
                     lastName: meta?.last_name ?? meta?.full_name?.split(" ").slice(1).join(" ") ?? "",
                     avatarUrl: meta?.avatar_url ?? meta?.picture ?? null,
                     provider: session.user.app_metadata?.provider ?? "email",
                     createdAt: session.user.created_at ?? "",
-                });
+                };
+
+                // 2. Try to get extended info from 'profiles' table
+                const { data: dbProfile } = await supabase
+                    .from("profiles")
+                    .select("profile_photo, first_name, last_name")
+                    .eq("id", session.user.id)
+                    .single();
+
+                if (dbProfile) {
+                    setUser({
+                        ...baseProfile,
+                        firstName: dbProfile.first_name || baseProfile.firstName,
+                        lastName: dbProfile.last_name || baseProfile.lastName,
+                        avatarUrl: dbProfile.profile_photo || baseProfile.avatarUrl,
+                    });
+                } else {
+                    setUser(baseProfile);
+                }
             } else {
                 window.location.href = "/login";
             }
             setLoading(false);
-        });
+        };
+
+        fetchProfile();
     }, []);
 
     const getInitials = () => {
@@ -97,17 +121,17 @@ export default function ProfilePage() {
 
                             {/* Avatar */}
                             <div className="px-8 -mt-14">
-                                {user.avatarUrl ? (
+                                <div className="h-24 w-24 rounded-full border-4 border-[#f7f1e8] shadow-lg overflow-hidden bg-[#8b5a3c]">
                                     <img
-                                        src={user.avatarUrl}
+                                        src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(getDisplayName())}&background=8b5a3c&color=fff&size=128`}
                                         alt="Profile"
-                                        className="h-24 w-24 rounded-full object-cover border-4 border-[#f7f1e8] shadow-lg"
+                                        className="h-full w-full object-cover"
+                                        onError={(e) => {
+                                            // Fallback if image fails to load
+                                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(getDisplayName())}&background=8b5a3c&color=fff&size=128`;
+                                        }}
                                     />
-                                ) : (
-                                    <div className="h-24 w-24 rounded-full bg-[#8b5a3c] border-4 border-[#f7f1e8] shadow-lg flex items-center justify-center text-white text-2xl font-semibold">
-                                        {getInitials()}
-                                    </div>
-                                )}
+                                </div>
                             </div>
 
                             {/* Info */}

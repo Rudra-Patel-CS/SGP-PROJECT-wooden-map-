@@ -6,11 +6,15 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div className="flex min-h-screen bg-[#FDFBF7]">
       <AdminNav />
-      <main className="flex-1 w-full lg:pl-64">
-        {children}
-      </main>
+      
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 pt-16 lg:pt-0">
+        <main className="flex-1 w-full lg:pl-64">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

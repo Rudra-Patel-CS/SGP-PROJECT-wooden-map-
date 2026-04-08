@@ -1,4 +1,7 @@
+"use client";
+
 import { Hammer, Leaf, Palette, Truck } from "lucide-react";
+import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/scroll-animate";
 
 const features = [
   {
@@ -32,60 +35,44 @@ export function WhyChooseUs() {
     <section className="py-28 px-6 lg:px-8 bg-[#e9e2d9]">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-20">
-          <p className="text-[#7a5c43] text-xs uppercase tracking-[0.35em] mb-4 font-semibold">
-            Why Choose Us
-          </p>
-
-          <h2 className="font-serif text-4xl md:text-5xl text-[#4b372a] mb-6">
-            Crafted with Purpose
-          </h2>
-
-          <p className="text-[#6b5a4d] max-w-2xl mx-auto text-lg leading-relaxed">
-            We believe in creating pieces that last generations, made with care
-            for both craftsmanship and our planet.
-          </p>
-        </div>
+        <ScrollReveal variant="fadeUp">
+          <div className="text-center mb-20">
+            <p className="text-[#7a5c43] text-xs uppercase tracking-[0.35em] mb-4 font-semibold">
+              Why Choose Us
+            </p>
+            <h2 className="font-serif text-4xl md:text-5xl text-[#4b372a] mb-6">
+              Crafted with Purpose
+            </h2>
+            <p className="text-[#6b5a4d] max-w-2xl mx-auto text-lg leading-relaxed">
+              We believe in creating pieces that last generations, made with care
+              for both craftsmanship and our planet.
+            </p>
+          </div>
+        </ScrollReveal>
 
         {/* Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10" staggerDelay={0.12}>
           {features.map((feature) => (
-            <div
-              key={feature.title}
-              className="
-                bg-[#f4efe9]
-                p-8
-                rounded-2xl
-                transition-all
-                duration-300
-                hover:-translate-y-1
-              "
-            >
-              {/* Icon */}
-              <div
-                className="
-                w-12 h-12
-                rounded-lg
-                bg-[#e3dace]
-                flex items-center justify-center
-                mb-6
-              "
-              >
-                <feature.icon className="w-5 h-5 text-[#6b5a4d]" />
+            <StaggerItem key={feature.title}>
+              <div className="bg-[#f4efe9] p-8 rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                {/* Icon */}
+                <div className="w-12 h-12 rounded-lg bg-[#e3dace] flex items-center justify-center mb-6">
+                  <feature.icon className="w-5 h-5 text-[#6b5a4d]" />
+                </div>
+
+                {/* Title */}
+                <h3 className="font-serif text-lg text-[#4b372a] mb-2">
+                  {feature.title}
+                </h3>
+
+                {/* Description */}
+                <p className="text-[#6b5a4d] text-sm leading-relaxed">
+                  {feature.description}
+                </p>
               </div>
-
-              {/* Title */}
-              <h3 className="font-serif text-lg text-[#4b372a] mb-2">
-                {feature.title}
-              </h3>
-
-              {/* Description */}
-              <p className="text-[#6b5a4d] text-sm leading-relaxed">
-                {feature.description}
-              </p>
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       </div>
     </section>
   );

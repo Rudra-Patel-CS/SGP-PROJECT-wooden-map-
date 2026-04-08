@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Star, ChevronLeft, ChevronRight, Quote } from "lucide-react";
+import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/scroll-animate";
+import { motion, AnimatePresence } from "framer-motion";
 
 const reviews = [
   {
@@ -48,105 +50,105 @@ export function CustomerReviews() {
     <section className="py-32 px-6 lg:px-8 bg-[#e9e2d9]">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-20">
-          <p className="uppercase tracking-[0.35em] text-xs text-[#7a5c43] mb-4">
-            Reviews
-          </p>
-
-          <h2 className="font-serif text-4xl md:text-5xl text-[#4b372a]">
-            What Our Customers Say
-          </h2>
-        </div>
+        <ScrollReveal variant="fadeUp">
+          <div className="text-center mb-20">
+            <p className="uppercase tracking-[0.35em] text-xs text-[#7a5c43] mb-4">
+              Reviews
+            </p>
+            <h2 className="font-serif text-4xl md:text-5xl text-[#4b372a]">
+              What Our Customers Say
+            </h2>
+          </div>
+        </ScrollReveal>
 
         {/* Testimonial Card */}
-        <div className="relative bg-[#f4efe9] rounded-3xl p-10 md:p-14">
-          {/* Big Quote */}
-          <Quote className="w-14 h-14 text-[#7a5c43]/40 mb-6" />
+        <ScrollReveal variant="scaleUp">
+          <div className="relative bg-[#f4efe9] rounded-3xl p-10 md:p-14">
+            {/* Big Quote */}
+            <Quote className="w-14 h-14 text-[#7a5c43]/40 mb-6" />
 
-          {/* Text */}
-          <p
-            className="
-  text-lg md:text-xl
-  leading-relaxed
-  text-[#4b372a]
-  max-w-3xl
-  mb-10
-  min-h-[140px]
-  line-clamp-4
-"
-          >
-            {review.text}
-          </p>
+            {/* Text */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentIndex}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.4 }}
+              >
+                <p className="text-lg md:text-xl leading-relaxed text-[#4b372a] max-w-3xl mb-10 min-h-[140px] line-clamp-4">
+                  {review.text}
+                </p>
 
-          {/* User */}
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-[#7a5c43] text-white flex items-center justify-center font-semibold">
-              {review.avatar}
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="font-semibold text-[#4b372a]">{review.name}</p>
-
-                <div className="flex">
-                  {[...Array(review.rating)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className="w-4 h-4 fill-[#c28b48] text-[#c28b48]"
-                    />
-                  ))}
+                {/* User */}
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full bg-[#7a5c43] text-white flex items-center justify-center font-semibold">
+                    {review.avatar}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-[#4b372a]">{review.name}</p>
+                      <div className="flex">
+                        {[...Array(review.rating)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className="w-4 h-4 fill-[#c28b48] text-[#c28b48]"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-sm text-[#6b5a4d]">
+                      {review.location} · {review.product}
+                    </p>
+                  </div>
                 </div>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Slider Controls */}
+            <div className="flex items-center justify-center gap-6 mt-10">
+              <button
+                onClick={prevReview}
+                className="w-9 h-9 rounded-full border border-[#7a5c43]/40 flex items-center justify-center hover:bg-[#7a5c43]/10 transition"
+              >
+                <ChevronLeft className="w-4 h-4 text-[#4b372a]" />
+              </button>
+              <div className="flex gap-2">
+                {reviews.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${
+                      i === currentIndex ? "bg-[#7a5c43]" : "bg-[#7a5c43]/30"
+                    }`}
+                  />
+                ))}
               </div>
-
-              <p className="text-sm text-[#6b5a4d]">
-                {review.location} · {review.product}
-              </p>
+              <button
+                onClick={nextReview}
+                className="w-9 h-9 rounded-full border border-[#7a5c43]/40 flex items-center justify-center hover:bg-[#7a5c43]/10 transition"
+              >
+                <ChevronRight className="w-4 h-4 text-[#4b372a]" />
+              </button>
             </div>
           </div>
-
-          {/* Slider Controls */}
-          <div className="flex items-center justify-center gap-6 mt-10">
-            <button
-              onClick={prevReview}
-              className="w-9 h-9 rounded-full border border-[#7a5c43]/40 flex items-center justify-center hover:bg-[#7a5c43]/10 transition"
-            >
-              <ChevronLeft className="w-4 h-4 text-[#4b372a]" />
-            </button>
-
-            <div className="flex gap-2">
-              {reviews.map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    i === currentIndex ? "bg-[#7a5c43]" : "bg-[#7a5c43]/30"
-                  }`}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={nextReview}
-              className="w-9 h-9 rounded-full border border-[#7a5c43]/40 flex items-center justify-center hover:bg-[#7a5c43]/10 transition"
-            >
-              <ChevronRight className="w-4 h-4 text-[#4b372a]" />
-            </button>
-          </div>
-        </div>
+        </ScrollReveal>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 text-center mt-20">
+        <StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-12 text-center mt-20" staggerDelay={0.1}>
           {[
             ["10K+", "Happy Customers"],
             ["120+", "Products"],
             ["4.9", "Average Ratings"],
             ["8", "Years In Business"],
           ].map(([num, label]) => (
-            <div key={label}>
-              <p className="font-serif text-4xl text-[#4b372a] mb-2">{num}</p>
-              <p className="text-[#6b5a4d] text-sm">{label}</p>
-            </div>
+            <StaggerItem key={label} variant="scaleUp">
+              <div>
+                <p className="font-serif text-4xl text-[#4b372a] mb-2">{num}</p>
+                <p className="text-[#6b5a4d] text-sm">{label}</p>
+              </div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       </div>
     </section>
   );

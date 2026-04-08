@@ -17,15 +17,33 @@ function getPublicClient() {
     );
 }
 
-// GET /api/products — fetch all active products
-export async function GET() {
+// GET /api/products — fetch products (add ?all=true for admin to include inactive)
+export async function GET(req: NextRequest) {
     try {
-        const supabase = getPublicClient();
-        const { data, error } = await supabase
+        const { searchParams } = new URL(req.url);
+        const showAll = searchParams.get("all") === "true";
+        const featuredOnly = searchParams.get("featured") === "true";
+        const adminAuth = req.headers.get("x-admin-auth");
+
+        // Use service client for admin requests to bypass RLS
+        const supabase = (showAll && adminAuth === "true") ? getServiceClient() : getPublicClient();
+
+        let query = supabase
             .from("products")
             .select("*")
-            .eq("is_active", true)
             .order("created_at", { ascending: false });
+
+        // Only filter by is_active for public requests
+        if (!showAll || adminAuth !== "true") {
+            query = query.eq("is_active", true);
+        }
+
+        // Filter featured products for homepage
+        if (featuredOnly) {
+            query = query.eq("featured", true);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
@@ -49,12 +67,10 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const supabase = getServiceClient();
 
-        const { data, error } = await supabase
-            .from("products")
-            .insert({
+        const insertData: any = {
                 name: body.name,
                 description: body.description || "",
-                price: parseFloat(body.price),
+                price: parseFloat(body.price) || 0,
                 stock: parseInt(body.stock) || 0,
                 category: body.category || "world",
                 size: body.size || "medium",
@@ -62,23 +78,20 @@ export async function POST(req: NextRequest) {
                 image_url: body.image_url || null,
                 images: body.images || [],
                 features: body.features || [],
-                specifications: body.specifications || {
-                    "Map Type": "Physical",
-                    "Size": "40 X 24 INCH",
-                    "Lamination": "Waterproof",
-                    "Language": "English",
-                    "Material": "Wooden",
-                    "Usage": "Home, Coaching, Office, School",
-                    "Color": "MULTI COLOR",
-                    "Surface Finish": "POLISH",
-                    "Service Duration": "WITH INSTALLATION",
-                    "Capacity": "10 YEAR AND MORE",
-                    "Packaging Type": "BOX PACK"
-                },
                 rating: 0,
                 reviews_count: 0,
                 is_active: true,
-            })
+                featured: body.featured || false,
+        };
+
+        // Add specifications only if provided to prevent errors if column is missing
+        if (body.specifications) {
+            insertData.specifications = body.specifications;
+        }
+
+        const { data, error } = await supabase
+            .from("products")
+            .insert(insertData)
             .select()
             .single();
 

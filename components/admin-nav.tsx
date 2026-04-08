@@ -18,7 +18,7 @@ import {
   Search,
   Bell,
   FileText,
-  MessageSquare,
+  Heart,
   Star,
   HelpCircle,
   Home
@@ -36,7 +36,7 @@ const dashboardItems = [
 ]
 
 const settingItems = [
-  { name: 'Messages', href: '/admin/messages', icon: MessageSquare },
+  { name: 'Watchlist', href: '/admin/watchlist', icon: Heart },
   { name: 'Reviews', href: '/admin/reviews', icon: Star },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
   { name: 'Help', href: '/admin/help', icon: HelpCircle },
@@ -61,14 +61,20 @@ export function AdminNav() {
 
   return (
     <>
-      {/* Mobile menu button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
+      {/* Mobile Top Bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#FDFBF7]/90 backdrop-blur-md border-b border-[rgba(139,90,60,0.15)] z-50 px-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg overflow-hidden">
+            <img src="/aryam-creation-logo.png" alt="Logo" className="w-full h-full object-cover" />
+          </div>
+          <span className="font-bold text-[#1E2430] text-sm tracking-tight">Aryam Admin</span>
+        </div>
+
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          style={{ background: 'rgba(255,255,255,0.85)', borderColor: '#e6dcd0', color: '#1E2430', backdropFilter: 'blur(12px)' }}
-          className=""
+          className="text-[#8b5a3c]"
         >
           <AnimatePresence mode="wait">
             {isMobileMenuOpen ? (
@@ -78,7 +84,7 @@ export function AdminNav() {
                 animate={{ rotate: 0, opacity: 1 }}
                 exit={{ rotate: 90, opacity: 0 }}
               >
-                <X className="h-5 w-5" />
+                <X className="h-6 w-6" />
               </motion.div>
             ) : (
               <motion.div
@@ -87,19 +93,18 @@ export function AdminNav() {
                 animate={{ rotate: 0, opacity: 1 }}
                 exit={{ rotate: -90, opacity: 0 }}
               >
-                <Menu className="h-5 w-5" />
+                <Menu className="h-6 w-6" />
               </motion.div>
             )}
           </AnimatePresence>
         </Button>
       </div>
 
-      {/* Sidebar */}
       <aside
         style={{ background: '#FDFBF7', borderRight: '1px solid rgba(139,90,60,0.15)', color: '#1E2430' }}
         className={`
           fixed top-0 left-0 h-full w-64
-          transform transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] z-40
+          transform transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] z-[60]
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
@@ -111,9 +116,13 @@ export function AdminNav() {
 
           {/* Logo Section */}
           <div className="p-6 pb-2" style={{ borderBottom: '1px solid rgba(139,90,60,0.15)' }}>
-            <div className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all" style={{ background: '#F0EBE1' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center font-serif font-bold text-lg" style={{ background: '#8b5a3c', color: '#FDFBF7' }}>
-                W
+            <div className="flex items-center gap-3 p-2 rounded-2xl cursor-pointer transition-all" style={{ background: '#F0EBE1' }}>
+              <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0">
+                <img 
+                  src="/aryam-creation-logo.png" 
+                  alt="Aryam Creation Logo" 
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-bold truncate" style={{ color: '#1E2430' }}>Aryam Maps</p>
@@ -222,26 +231,16 @@ export function AdminNav() {
           </nav>
 
           {/* User Profile Section */}
-          <div className="p-4 space-y-3" style={{ borderTop: '1px solid rgba(139,90,60,0.15)' }}>
+          <div className="p-4" style={{ borderTop: '1px solid rgba(139,90,60,0.15)' }}>
             <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'rgba(139,90,60,0.05)', border: '1px solid rgba(139,90,60,0.15)' }}>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm" style={{ background: '#F0EBE1', color: '#8b5a3c' }}>
-                GH
+                A
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold truncate" style={{ color: '#1E2430' }}>Guy Hawkins</p>
-                <p className="text-[10px] truncate" style={{ color: '#6E6B5E' }}>Admin</p>
+                <p className="text-xs font-bold truncate" style={{ color: '#1E2430' }}>Admin</p>
+                <p className="text-[10px] truncate" style={{ color: '#6E6B5E' }}>Portal Manager</p>
               </div>
             </div>
-            
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg bg-red-600/10 border border-red-500/30 text-red-300 hover:bg-red-600/20 hover:text-red-200 transition-all duration-300 text-sm font-medium"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </motion.button>
           </div>
         </div>
       </aside>

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Header } from "@/components/header";
@@ -9,10 +8,13 @@ import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, Truck, Shield, Package, Minus, Plus, ChevronRight, Check, ShoppingCart, Zap, Loader2 } from "lucide-react";
+import { Star, Truck, Shield, Package, Minus, Plus, ChevronLeft, ChevronRight, Check, ShoppingCart, Zap, Loader2, X, Maximize2, Heart, Search } from "lucide-react";
 import { useCart } from "@/lib_supabase/cart-context";
 import { createClient } from "@/lib_supabase/supabase/client";
+import { MAP_SIZES, normalizeSizeId } from "@/lib_supabase/constants";
+import { ReviewSection } from "@/components/reviews/review-section";
+import { useSettings } from "@/components/settings-context";
+import { formatPrice } from "@/lib_supabase/utils";
 
 interface Product {
   id: string;
@@ -31,42 +33,79 @@ interface Product {
   specifications: Record<string, string> | null;
 }
 
-const sizeOptions = [
-  { id: "small", label: "Small", dimensions: "30 x 20 cm", price: 0 },
-  { id: "medium", label: "Medium", dimensions: "60 x 40 cm", price: 50 },
-  { id: "large", label: "Large", dimensions: "90 x 60 cm", price: 100 },
-  { id: "xl", label: "XL", dimensions: "120 x 80 cm", price: 200 },
-];
-
-const colorOptions = [
-  { id: "natural", label: "Natural Oak", color: "#C4A77D" },
-  { id: "walnut", label: "Dark Walnut", color: "#5C4033" },
-  { id: "white", label: "White Wash", color: "#E8E4DC" },
-];
-
-const languageOptions = [
-  { id: "en", label: "English" },
-  { id: "de", label: "German" },
-  { id: "fr", label: "French" },
-  { id: "es", label: "Spanish" },
-];
-
 export default function ProductPage() {
+  const { settings } = useSettings();
   const params = useParams();
   const productId = params.id as string;
   const { addToCart } = useCart();
   const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+  }, []);
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedSize, setSelectedSize] = useState("medium");
-  const [selectedColor, setSelectedColor] = useState("natural");
-  const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const [selectedSize, setSelectedSize] = useState(""); 
+
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
+
+  const [showLightbox, setShowLightbox] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const [isWatchlisted, setIsWatchlisted] = useState(false);
+  const [watchlistLoading, setWatchlistLoading] = useState(false);
+
+  const checkWatchlist = useCallback(async () => {
+    if (!user || !productId) return;
+    try {
+      const res = await fetch(`/api/watchlist?userId=${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        const exists = data.some((item: any) => item.product_id === productId);
+        setIsWatchlisted(exists);
+      }
+    } catch (error) {
+      console.error("Error checking watchlist:", error);
+    }
+  }, [user, productId]);
+
+  const toggleWatchlist = async () => {
+    if (!user) {
+      router.push("/login?redirect=" + encodeURIComponent(window.location.pathname));
+      return;
+    }
+    setWatchlistLoading(true);
+    try {
+      const res = await fetch("/api/watchlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: productId, user_id: user.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setIsWatchlisted(data.status === "added");
+      }
+    } catch (error) {
+      console.error("Error toggling watchlist:", error);
+    } finally {
+      setWatchlistLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && productId) {
+      checkWatchlist();
+    }
+  }, [user, productId, checkWatchlist]);
 
   // Fetch product from Supabase
   useEffect(() => {
@@ -89,6 +128,36 @@ export default function ProductPage() {
       fetchProduct();
     }
   }, [productId]);
+
+  // Set default size after product is loaded
+  useEffect(() => {
+    if (product) {
+      const dbSize = normalizeSizeId(product.size);
+      if (dbSize === "all") {
+        setSelectedSize("xs"); // Default to smallest for 'all'
+      } else {
+        setSelectedSize(dbSize);
+      }
+    }
+  }, [product]);
+
+  // Build images list from product data
+  const allImages = (product?.images && product.images.length > 0)
+    ? product.images
+    : (product?.image_url
+      ? [product.image_url]
+      : ["/placeholder.svg"]);
+
+  // Auto-slide logic (3 seconds)
+  useEffect(() => {
+    if (!product || !allImages || allImages.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setSelectedImage((prev) => (prev + 1) % allImages.length);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [product, allImages, selectedImage]); 
 
   if (loading) {
     return (
@@ -118,15 +187,14 @@ export default function ProductPage() {
     );
   }
 
-  // Build images list from product data
-  const allImages = product.images && product.images.length > 0
-    ? product.images
-    : product.image_url
-      ? [product.image_url]
-      : ["/placeholder.svg"];
+  // Filter sizes based on product availability
+  const dbSizeId = normalizeSizeId(product.size);
+  const availableSizes = dbSizeId === 'all' 
+    ? MAP_SIZES 
+    : MAP_SIZES.filter(s => s.id === dbSizeId);
 
-  const sizePrice = sizeOptions.find((s) => s.id === selectedSize)?.price || 0;
-  const totalPrice = product.price + sizePrice;
+  const currentSizeData = MAP_SIZES.find(s => s.id === selectedSize) || availableSizes[0] || MAP_SIZES[0];
+  const totalPrice = currentSizeData.price;
 
   const checkAuth = async (): Promise<boolean> => {
     const supabase = createClient();
@@ -142,17 +210,14 @@ export default function ProductPage() {
     const isAuthed = await checkAuth();
     if (!isAuthed) return;
 
-    const selectedSizeOption = sizeOptions.find((s) => s.id === selectedSize);
-    const selectedColorOption = colorOptions.find((c) => c.id === selectedColor);
-
     addToCart({
-      id: parseInt(product.id) || Date.now(),
+      id: product.id,
       name: product.name,
       price: totalPrice,
       quantity: quantity,
       image: allImages[0],
-      size: `${selectedSizeOption?.label} (${selectedSizeOption?.dimensions})`,
-      color: selectedColorOption?.label || "Natural Oak"
+      size: `${currentSizeData.label} (${currentSizeData.dimensions})`,
+      color: "Natural Oak"
     });
 
     setAddedToCart(true);
@@ -163,23 +228,19 @@ export default function ProductPage() {
     const isAuthed = await checkAuth();
     if (!isAuthed) return;
 
-    const selectedSizeOption = sizeOptions.find((s) => s.id === selectedSize);
-    const selectedColorOption = colorOptions.find((c) => c.id === selectedColor);
-
     addToCart({
-      id: parseInt(product.id) || Date.now(),
+      id: product.id,
       name: product.name,
       price: totalPrice,
       quantity: quantity,
       image: allImages[0],
-      size: `${selectedSizeOption?.label} (${selectedSizeOption?.dimensions})`,
-      color: selectedColorOption?.label || "Natural Oak"
+      size: `${currentSizeData.label} (${currentSizeData.dimensions})`,
+      color: "Natural Oak"
     });
 
     router.push("/cart");
   };
 
-  // Fetch related products (we can show some placeholder for now)
   const relatedProducts = [
     { id: "1", name: "Classic World Map", price: 299, image: "/world-map-1.jpeg" },
     { id: "2", name: "LED Europe Map", price: 349, image: "/world-map-2.jpeg" },
@@ -203,31 +264,105 @@ export default function ProductPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             <div className="space-y-4">
-              <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
-                {allImages[selectedImage] && allImages[selectedImage] !== "/placeholder.svg" ? (
-                  <img
-                    src={allImages[selectedImage]}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-[#f3ebe2] text-[#8b5a3c]">
-                    <span className="text-sm">No Image</span>
-                  </div>
+              <div className="relative aspect-square overflow-hidden rounded-lg bg-muted group">
+                {(() => {
+                  const mediaUrl = allImages[selectedImage];
+                  const isVideo = (url: string) => url && /\.(mp4|webm|ogg)$/i.test(url);
+                  
+                  if (isVideo(mediaUrl)) {
+                    return (
+                      <video
+                        src={mediaUrl}
+                        className="w-full h-full object-contain"
+                        controls
+                        autoPlay
+                        muted
+                        loop
+                      />
+                    );
+                  } else if (mediaUrl && mediaUrl !== "/placeholder.svg") {
+                    return (
+                      <div 
+                        className="relative w-full h-full cursor-zoom-in group/img"
+                        onClick={() => {
+                          setLightboxIndex(selectedImage);
+                          setShowLightbox(true);
+                        }}
+                      >
+                        <img
+                          src={mediaUrl}
+                          alt={product.name}
+                          className="w-full h-full object-contain transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="bg-white/90 p-2 rounded-full shadow-lg transform scale-90 group-hover/img:scale-100 transition-transform">
+                            <Maximize2 className="w-5 h-5 text-[#8b5a3c]" />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="w-full h-full flex items-center justify-center bg-[#f3ebe2] text-[#8b5a3c]">
+                         <span className="text-sm">No Image</span>
+                      </div>
+                    );
+                  }
+                })()}
+
+                {allImages.length > 1 && (
+                  <>
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setSelectedImage(prev => (prev - 1 + allImages.length) % allImages.length);
+                      }}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-[#2b1a12] flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
+                    >
+                      <ChevronLeft className="w-6 h-6" />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setSelectedImage(prev => (prev + 1) % allImages.length);
+                      }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-[#2b1a12] flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
+                    >
+                      <ChevronRight className="w-6 h-6" />
+                    </button>
+                  </>
                 )}
+
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                  {allImages.map((_, i) => (
+                    <div 
+                      key={i} 
+                      className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${selectedImage === i ? "bg-[#8b5a3c] w-4" : "bg-white/60"}`}
+                    />
+                  ))}
+                </div>
               </div>
               {allImages.length > 1 && (
                 <div className="grid grid-cols-4 gap-4">
-                  {allImages.map((image, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedImage(index)}
-                      className={`relative aspect-square overflow-hidden rounded-lg bg-muted ${selectedImage === index ? "ring-2 ring-accent" : ""
-                        }`}
-                    >
-                      <img src={image || "/placeholder.svg"} alt={`${product.name} ${index + 1}`} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
+                  {allImages.map((image, index) => {
+                    const isVideo = (url: string) => url && /\.(mp4|webm|ogg)$/i.test(url);
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedImage(index)}
+                        className={`relative aspect-square overflow-hidden rounded-lg bg-muted flex items-center justify-center ${selectedImage === index ? "ring-2 ring-[#8b5a3c]" : "ring-1 ring-[#e6dcd0]"
+                          }`}
+                      >
+                        {isVideo(image) ? (
+                          <div className="w-full h-full bg-[#2b1a12] flex items-center justify-center">
+                            <span className="text-[10px] text-white font-bold">VIDEO</span>
+                          </div>
+                        ) : (
+                          <img src={image || "/placeholder.svg"} alt={`${product.name} ${index + 1}`} className="w-full h-full object-cover" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -244,13 +379,32 @@ export default function ProductPage() {
                 </div>
                 <span className="text-sm font-medium text-foreground">{product.rating || 0}</span>
                 <span className="text-sm text-muted-foreground">({product.reviews_count || 0} reviews)</span>
+
+                <button
+                  onClick={toggleWatchlist}
+                  disabled={watchlistLoading}
+                  className="ml-auto p-2 rounded-full hover:bg-red-50 transition-colors group"
+                  title={isWatchlisted ? "Remove from watchlist" : "Add to watchlist"}
+                >
+                  {watchlistLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-muted" />
+                  ) : (
+                    <Heart
+                      className={`w-5 h-5 transition-all ${
+                        isWatchlisted 
+                          ? "fill-red-500 text-red-500 scale-110" 
+                          : "text-muted-foreground group-hover:text-red-400 group-hover:scale-110"
+                      }`}
+                    />
+                  )}
+                </button>
               </div>
 
               <h1 className="font-serif text-3xl md:text-4xl font-medium text-foreground mb-4">
                 {product.name}
               </h1>
 
-              <p className="text-3xl font-semibold text-foreground mb-6">${totalPrice}</p>
+              <p className="text-3xl font-semibold text-foreground mb-6">{formatPrice(totalPrice, settings.currency)}</p>
 
               {product.description && (
                 <p className="text-muted-foreground leading-relaxed mb-8">{product.description}</p>
@@ -265,60 +419,61 @@ export default function ProductPage() {
               )}
 
               <div className="space-y-6 mb-8">
-                <div>
-                  <Label className="text-sm font-medium text-foreground mb-3 block">Size</Label>
-                  <RadioGroup value={selectedSize} onValueChange={setSelectedSize} className="grid grid-cols-2 gap-3">
-                    {sizeOptions.map((option) => (
-                      <div key={option.id}>
-                        <RadioGroupItem value={option.id} id={option.id} className="peer sr-only" />
-                        <Label
-                          htmlFor={option.id}
-                          className="flex flex-col items-center justify-center p-4 border border-border rounded-lg cursor-pointer transition-all peer-data-[state=checked]:border-accent peer-data-[state=checked]:bg-accent/5 hover:border-muted-foreground"
-                        >
-                          <span className="font-medium text-foreground">{option.label}</span>
-                          <span className="text-sm text-muted-foreground">{option.dimensions}</span>
-                          {option.price > 0 && (
-                            <span className="text-sm text-accent mt-1">+${option.price}</span>
-                          )}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-
-                <div>
-                  <Label className="text-sm font-medium text-foreground mb-3 block">Wood Color</Label>
-                  <RadioGroup value={selectedColor} onValueChange={setSelectedColor} className="flex gap-3">
-                    {colorOptions.map((option) => (
-                      <div key={option.id}>
-                        <RadioGroupItem value={option.id} id={`color-${option.id}`} className="peer sr-only" />
-                        <Label
-                          htmlFor={`color-${option.id}`}
-                          className="flex flex-col items-center gap-2 p-3 border border-border rounded-lg cursor-pointer transition-all peer-data-[state=checked]:border-accent hover:border-muted-foreground"
-                        >
-                          <div className="w-8 h-8 rounded-full border border-border" style={{ backgroundColor: option.color }} />
-                          <span className="text-xs text-muted-foreground">{option.label}</span>
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-
-                <div>
-                  <Label className="text-sm font-medium text-foreground mb-3 block">Label Language</Label>
-                  <RadioGroup value={selectedLanguage} onValueChange={setSelectedLanguage} className="flex flex-wrap gap-3">
-                    {languageOptions.map((option) => (
-                      <div key={option.id}>
-                        <RadioGroupItem value={option.id} id={`lang-${option.id}`} className="peer sr-only" />
-                        <Label
-                          htmlFor={`lang-${option.id}`}
-                          className="px-4 py-2 border border-border rounded-lg cursor-pointer transition-all peer-data-[state=checked]:border-accent peer-data-[state=checked]:bg-accent/5 hover:border-muted-foreground text-sm text-foreground"
-                        >
-                          {option.label}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
+                {/* Premium Size Selection */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-bold text-[#2b1a12] tracking-wide uppercase">Select Map Scale</Label>
+                    <span className="text-[10px] font-semibold text-[#8b5a3c] bg-[#fdf8f2] px-3 py-1 rounded-full border border-[#e6dcd0] shadow-sm italic">
+                      Installation Included Free
+                    </span>
+                  </div>
+                  
+                  <div className="relative pt-2 pb-2">
+                    {/* Horizontal Ribbon Picker */}
+                    <div className="flex items-center justify-between gap-2 p-1.5 bg-[#f7f1e8] rounded-2xl border border-[#e6dcd0] shadow-inner relative overflow-x-auto no-scrollbar">
+                      {MAP_SIZES.map((option) => {
+                        const isAvailable = availableSizes.some(s => s.id === option.id);
+                        const isSelected = selectedSize === option.id;
+                        
+                        return (
+                          <button
+                            key={option.id}
+                            disabled={!isAvailable}
+                            onClick={() => setSelectedSize(option.id)}
+                            className={`flex-1 min-w-[70px] relative py-4 px-2 rounded-xl transition-all duration-500 flex flex-col items-center justify-center gap-1.5 group
+                              ${isSelected 
+                                ? "bg-[#8b5a3c] text-white shadow-[0_4px_12px_rgba(139,90,60,0.3)] transform -translate-y-1 scale-105 z-10" 
+                                : isAvailable 
+                                  ? "hover:bg-[#e6dcd0] text-[#5a3726] hover:-translate-y-0.5" 
+                                  : "opacity-20 cursor-not-allowed grayscale"
+                              }`}
+                          >
+                            <span className={`text-base font-black leading-none ${isSelected ? "text-white" : "text-[#2b1a12]"}`}>{option.label}</span>
+                            <div className="flex flex-col items-center leading-tight">
+                              <span className={`text-[9px] font-bold uppercase tracking-tight ${isSelected ? "text-white/90" : "text-[#8b5a3c]"}`}>{option.dimensions.split(' ')[0]} {option.dimensions.split(' ')[1]}</span>
+                              <span className={`text-[7px] font-medium opacity-80 ${isSelected ? "text-white/70" : "text-[#8b5a3c]/70"}`}>{option.dimensions.split(' ').slice(2).join(' ')}</span>
+                            </div>
+                            
+                            {/* Visual Feedback for Price on Select */}
+                            {isSelected && (
+                              <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap animate-in fade-in zoom-in slide-in-from-bottom-2 duration-300">
+                                <span className="text-[11px] font-black text-[#8b5a3c] bg-white px-3 py-1 rounded-full border border-[#e6dcd0] shadow-xl">
+                                  {formatPrice(option.price, settings.currency)}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {/* Tooltip for Dimensions on Hover */}
+                            {isAvailable && !isSelected && (
+                               <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 scale-0 group-hover:scale-100 transition-all opacity-0 group-hover:opacity-100 bg-[#2b1a12] text-white text-[10px] px-3 py-1.5 rounded-lg shadow-2xl z-50 pointer-events-none whitespace-nowrap border border-white/10 font-bold">
+                                  {option.dimensions} · {formatPrice(option.price, settings.currency)}
+                               </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -343,7 +498,7 @@ export default function ProductPage() {
               <div className="space-y-3">
                 <Button
                   size="lg"
-                  className="w-full py-6 text-base bg-[#8b5a3c] hover:bg-[#6d4830]"
+                  className="w-full py-6 text-base font-semibold text-white bg-[#8b5a3c] hover:bg-[#6d4830] transition-all duration-300 hover:shadow-lg shadow-md"
                   onClick={handleAddToCart}
                   disabled={addedToCart || product.stock === 0}
                 >
@@ -355,25 +510,25 @@ export default function ProductPage() {
                   ) : (
                     <>
                       <ShoppingCart className="w-5 h-5 mr-2" />
-                      Add to Cart - ${totalPrice * quantity}
+                      Add to Cart - {formatPrice(totalPrice * quantity, settings.currency)}
                     </>
                   )}
                 </Button>
                 <Button
                   size="lg"
-                  className="w-full py-6 text-base bg-[#8b5a3c] hover:bg-[#6d4830]"
+                  className="w-full py-6 text-base font-semibold text-white bg-[#5a3726] hover:bg-[#3d2519] transition-all duration-300 hover:shadow-lg shadow-md"
                   onClick={handleBuyNow}
                   disabled={product.stock === 0}
                 >
                   <Zap className="w-5 h-5 mr-2" />
-                  Buy Now - ${totalPrice * quantity}
+                  Buy Now - {formatPrice(totalPrice * quantity, settings.currency)}
                 </Button>
               </div>
 
               <div className="mt-8 pt-8 border-t border-border space-y-4">
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   <Truck className="w-5 h-5 text-accent" />
-                  <span>Free shipping on orders over ₹2000</span>
+                  <span>Free shipping on orders over {formatPrice(2000, settings.currency)}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   <Shield className="w-5 h-5 text-accent" />
@@ -391,65 +546,48 @@ export default function ProductPage() {
 
       <section className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <Tabs defaultValue="description" className="w-full">
-            <TabsList className="w-full justify-start border-b border-border rounded-none bg-transparent p-0 mb-8">
-              <TabsTrigger
-                value="description"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent px-6 py-3"
-              >
-                Description
-              </TabsTrigger>
-              <TabsTrigger
-                value="specifications"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent px-6 py-3"
-              >
-                Specifications
-              </TabsTrigger>
-              <TabsTrigger
-                value="shipping"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent px-6 py-3"
-              >
-                Shipping & Delivery
-              </TabsTrigger>
-              <TabsTrigger
-                value="installation"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent px-6 py-3"
-              >
-                Installation
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="description" className="mt-0">
-              <div className="prose prose-neutral max-w-none">
-                <p className="text-muted-foreground leading-relaxed mb-6">{product.description}</p>
-                {product.features && product.features.length > 0 && (
-                  <>
-                    <h3 className="font-serif text-xl text-foreground mb-4">Features</h3>
-                    <ul className="space-y-2">
-                      {product.features.map((feature, index) => (
-                        <li key={index} className="flex items-center gap-3 text-muted-foreground">
-                          <Check className="w-5 h-5 text-accent shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
+          <div className="bg-white rounded-3xl shadow-lg border border-[#e6dcd0] overflow-hidden">
+            <div className="p-8 md:p-10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8b5a3c] to-[#5a3726] flex items-center justify-center shadow-md">
+                  <Star className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="font-serif text-2xl font-bold text-[#2b1a12]">Description &amp; Features</h2>
               </div>
-            </TabsContent>
+              <p className="text-[#5a3726] leading-relaxed text-base mb-6">{product.description}</p>
+              {product.features && product.features.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {product.features.map((feature, index) => (
+                    <div key={index} className="flex items-center gap-3 bg-[#fffaf3] px-4 py-3 rounded-xl border border-[#f3ebe2]">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#8b5a3c] to-[#a0724e] flex items-center justify-center flex-shrink-0">
+                        <Check className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-[#2b1a12] font-medium text-sm">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-            <TabsContent value="specifications" className="mt-0">
-              <div className="prose prose-neutral max-w-none">
-                {product.specifications && Object.keys(product.specifications).length > 0 ? (
-                  <div className="overflow-hidden rounded-lg border border-border">
+            {product.specifications && Object.keys(product.specifications).length > 0 && (
+              <>
+                <div className="mx-8 md:mx-10 h-px bg-gradient-to-r from-transparent via-[#e6dcd0] to-transparent" />
+                <div className="p-8 md:p-10">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8b5a3c] to-[#5a3726] flex items-center justify-center shadow-md">
+                      <Shield className="w-5 h-5 text-white" />
+                    </div>
+                    <h2 className="font-serif text-2xl font-bold text-[#2b1a12]">Specifications</h2>
+                  </div>
+                  <div className="overflow-hidden rounded-2xl border border-[#e6dcd0]">
                     <table className="w-full">
                       <tbody>
                         {Object.entries(product.specifications).map(([key, value], i) => (
-                          <tr key={key} className={i % 2 === 0 ? 'bg-muted/30' : 'bg-background'}>
-                            <td className="px-6 py-4 text-sm font-medium text-foreground w-1/3 border-r border-border">
+                          <tr key={key} className={`${i % 2 === 0 ? 'bg-[#fffaf3]' : 'bg-white'} border-b border-[#f3ebe2] last:border-b-0`}>
+                            <td className="px-6 py-4 text-sm font-semibold text-[#8b5a3c] w-2/5">
                               {key}
                             </td>
-                            <td className="px-6 py-4 text-sm text-muted-foreground">
+                            <td className="px-6 py-4 text-sm text-[#2b1a12] font-medium">
                               {value}
                             </td>
                           </tr>
@@ -457,64 +595,76 @@ export default function ProductPage() {
                       </tbody>
                     </table>
                   </div>
-                ) : (
-                  <p className="text-muted-foreground">No specifications available for this product.</p>
-                )}
-              </div>
-            </TabsContent>
+                </div>
+              </>
+            )}
 
-            <TabsContent value="shipping" className="mt-0">
-              <div className="prose prose-neutral max-w-none">
-                <p className="text-muted-foreground leading-relaxed mb-4">
-                  We ship worldwide with care to ensure your map arrives in perfect condition.
-                </p>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-accent shrink-0" />
-                    Free shipping on orders over ₹2000
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-accent shrink-0" />
-                    Standard delivery: 7-14 business days
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-accent shrink-0" />
-                    Express delivery: 3-5 business days (+₹250)
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-accent shrink-0" />
-                    Secure, custom packaging for safe transit
-                  </li>
-                </ul>
-              </div>
-            </TabsContent>
+            <div className="mx-8 md:mx-10 h-px bg-gradient-to-r from-transparent via-[#e6dcd0] to-transparent" />
+            <div className="p-8 md:p-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-[#fffaf3] p-6 rounded-2xl border border-[#f3ebe2]">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8b5a3c] to-[#5a3726] flex items-center justify-center shadow-md">
+                      <Truck className="w-5 h-5 text-white" />
+                    </div>
+                    <h3 className="font-serif text-xl font-bold text-[#2b1a12]">Shipping &amp; Delivery</h3>
+                  </div>
+                  <p className="text-[#5a3726] mb-5 text-sm leading-relaxed">
+                    We ship worldwide with care to ensure your map arrives in perfect condition.
+                  </p>
+                  <ul className="space-y-3">
+                    {[
+                      "Free shipping on orders over " + formatPrice(2000, settings.currency),
+                      "Standard delivery: 7-14 business days",
+                      "Express delivery: 3-5 business days (+" + formatPrice(250, settings.currency) + ")",
+                      "Secure, custom packaging for safe transit"
+                    ].map((item, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm text-[#2b1a12]">
+                        <div className="w-5 h-5 rounded-full bg-white border border-[#e6dcd0] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+                          <Check className="w-3 h-3 text-[#8b5a3c]" />
+                        </div>
+                        <span className="font-medium">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-            <TabsContent value="installation" className="mt-0">
-              <div className="prose prose-neutral max-w-none">
-                <p className="text-muted-foreground leading-relaxed mb-4">
-                  Every map comes with everything you need for easy installation.
-                </p>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-accent shrink-0" />
-                    Wall mounting template included
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-accent shrink-0" />
-                    Hidden hanging system for clean look
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-accent shrink-0" />
-                    Step-by-step video guide available
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-accent shrink-0" />
-                    Customer support available if needed
-                  </li>
-                </ul>
+                <div className="bg-[#fffaf3] p-6 rounded-2xl border border-[#f3ebe2]">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8b5a3c] to-[#5a3726] flex items-center justify-center shadow-md">
+                      <Package className="w-5 h-5 text-white" />
+                    </div>
+                    <h3 className="font-serif text-xl font-bold text-[#2b1a12]">Installation</h3>
+                  </div>
+                  <p className="text-[#5a3726] mb-5 text-sm leading-relaxed">
+                    Every map comes with everything you need for easy installation at home.
+                  </p>
+                  <ul className="space-y-3">
+                    {[
+                      "Wall mounting stencil template included",
+                      "Double-sided adhesive tape provided",
+                      "Step-by-step video guide available",
+                      "Customer support available if needed"
+                    ].map((item, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm text-[#2b1a12]">
+                        <div className="w-5 h-5 rounded-full bg-white border border-[#e6dcd0] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+                          <Check className="w-3 h-3 text-[#8b5a3c]" />
+                        </div>
+                        <span className="font-medium">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
+
+          {/* Product Reviews Section */}
+          <ReviewSection 
+            productId={product.id} 
+            initialRating={product.rating || 0} 
+            initialCount={product.reviews_count || 0} 
+          />
         </div>
       </section>
 
@@ -540,7 +690,7 @@ export default function ProductPage() {
                 <h3 className="font-medium text-foreground group-hover:text-accent transition-colors text-sm">
                   {item.name}
                 </h3>
-                <p className="text-foreground font-semibold mt-1">${item.price}</p>
+                <p className="text-foreground font-semibold mt-1">{formatPrice(item.price, settings.currency)}</p>
               </Link>
             ))}
           </div>
@@ -548,6 +698,83 @@ export default function ProductPage() {
       </section>
 
       <Footer />
+
+      {/* Lightbox Modal */}
+      {showLightbox && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-300"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setShowLightbox(false);
+            if (e.key === "ArrowLeft") setLightboxIndex(prev => (prev - 1 + allImages.length) % allImages.length);
+            if (e.key === "ArrowRight") setLightboxIndex(prev => (prev + 1) % allImages.length);
+          }}
+          tabIndex={0}
+        >
+          <button 
+            onClick={() => setShowLightbox(false)}
+            className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors z-[110]"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          {allImages.length > 1 && (
+            <>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex(prev => (prev - 1 + allImages.length) % allImages.length);
+                }}
+                className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors z-[110]"
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex(prev => (prev + 1) % allImages.length);
+                }}
+                className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors z-[110]"
+              >
+                <ChevronRight className="w-8 h-8" />
+              </button>
+            </>
+          )}
+
+          <div className="relative w-full h-full flex flex-col items-center justify-center" onClick={() => setShowLightbox(false)}>
+            <div className="relative max-w-full max-h-full aspect-auto" onClick={(e) => e.stopPropagation()}>
+               {(() => {
+                  const mediaUrl = allImages[lightboxIndex];
+                  const isVideo = (url: string) => url && /\.(mp4|webm|ogg)$/i.test(url);
+                  
+                  if (isVideo(mediaUrl)) {
+                    return (
+                      <video
+                        src={mediaUrl}
+                        className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                        controls
+                        autoPlay
+                        muted
+                        loop
+                      />
+                    );
+                  } else {
+                    return (
+                      <img
+                        src={mediaUrl}
+                        alt={product.name}
+                        className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg shadow-2xl border border-white/10"
+                      />
+                    );
+                  }
+               })()}
+               
+               <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium whitespace-nowrap">
+                  {product.name} &middot; {lightboxIndex + 1} / {allImages.length}
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

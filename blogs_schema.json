@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "id": "658c59d8-88d7-4c92-8684-3cdf917aa947",
+      "title": "The Best selling Map",
+      "slug": "the-best-selling-map",
+      "content": "Markdown is Nothing",
+      "excerpt": "A indian Wooden well polished map",
+      "image_url": "https://clcagrawtbtpfszvyfki.supabase.co/storage/v1/object/public/blog-media/public/1774638424393-frmss.jpeg",
+      "author": "Admin",
+      "created_at": "2026-03-27T19:07:48.380132+00:00",
+      "updated_at": "2026-03-27T19:07:48.380132+00:00"
+    }
+  ],
+  "error": null
+}

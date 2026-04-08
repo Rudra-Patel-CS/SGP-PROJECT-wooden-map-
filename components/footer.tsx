@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { Instagram, Facebook, Twitter } from "lucide-react";
+import { useSettings } from "@/components/settings-context";
 
 export function Footer() {
+  const { settings } = useSettings();
   const footerLinks = {
     shop: [
       { name: "World Map", href: "/shop?category=world" },
@@ -37,11 +39,11 @@ export function Footer() {
                 className="w-9 h-9 rounded-md object-cover"
               />
 
-              <span className="font-serif text-xl tracking-tight">Aryam Maps</span>
+              <span className="font-serif text-xl tracking-tight">{settings.store_name}</span>
             </Link>
 
             <p className="text-[#f5efe6]/80 max-w-sm leading-relaxed text-sm mb-4">
-              Handcrafted wooden maps that bring the beauty of the world into
+              Handcrafted wooden maps that bring {settings.store_name}&apos;s artisan craftsmanship into
               your home. Each piece is made with sustainably sourced wood and
               artisan craftsmanship.
             </p>
@@ -92,7 +94,7 @@ export function Footer() {
         {/* DIVIDER */}
         <div className="border-t border-[#f5efe6]/20 mt-16 pt-8 text-center">
           <p className="text-sm text-[#f5efe6]/60">
-            © {new Date().getFullYear()} Aryam Maps. All rights reserved.
+            © {new Date().getFullYear()} {settings.store_name}. All rights reserved.
           </p>
         </div>
       </div>
