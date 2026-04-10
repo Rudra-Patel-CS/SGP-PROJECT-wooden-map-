@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       amount: Math.round(amount * 100), // Convert to paise
       currency: "INR",
       receipt: orderId,
-      payment_capture: 1, // Auto capture payment
+      payment_capture: true, // Auto capture payment
       notes: {
         orderId,
         customerEmail,
