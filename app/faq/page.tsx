@@ -176,7 +176,7 @@ export default function FAQPage() {
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-3xl text-center">
               <h1 className="font-serif text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl text-balance">
-                Frequently Asked Questions
+                Frequently Ask Questions
               </h1>
               <p className="mt-6 text-lg text-muted-foreground text-pretty">
                 Find answers to common questions about our handcrafted wooden
