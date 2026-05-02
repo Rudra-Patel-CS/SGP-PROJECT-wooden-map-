@@ -104,13 +104,43 @@ export async function DELETE(
         const supabase = getServiceClient();
 
         if (permanent) {
-            // Hard delete: completely remove from database
+            // Hard delete: remove all related records first, then the product
+
+            // 1. Delete related watchlist entries
+            const { error: watchlistErr } = await supabase
+                .from("watchlist")
+                .delete()
+                .eq("product_id", id);
+            if (watchlistErr) {
+                console.error("[DELETE] watchlist cleanup error:", watchlistErr.message);
+            }
+
+            // 2. Delete related order_items entries
+            const { error: orderItemsErr } = await supabase
+                .from("order_items")
+                .delete()
+                .eq("product_id", id);
+            if (orderItemsErr) {
+                console.error("[DELETE] order_items cleanup error:", orderItemsErr.message);
+            }
+
+            // 3. Delete related reviews (should cascade, but be explicit)
+            const { error: reviewsErr } = await supabase
+                .from("reviews")
+                .delete()
+                .eq("product_id", id);
+            if (reviewsErr) {
+                console.error("[DELETE] reviews cleanup error:", reviewsErr.message);
+            }
+
+            // 4. Now delete the product itself
             const { error } = await supabase
                 .from("products")
                 .delete()
                 .eq("id", id);
 
             if (error) {
+                console.error("[DELETE] product delete error:", error.message, error.details, error.hint);
                 return NextResponse.json({ error: error.message }, { status: 500 });
             }
         } else {
@@ -126,7 +156,8 @@ export async function DELETE(
         }
 
         return NextResponse.json({ success: true, permanent });
-    } catch {
+    } catch (e: any) {
+        console.error("[DELETE] Unexpected error:", e?.message || e);
         return NextResponse.json({ error: "Failed to delete product" }, { status: 500 });
     }
 }

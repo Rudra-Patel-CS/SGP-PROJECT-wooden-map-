@@ -170,6 +170,7 @@ export default function FAQPage() {
     <div className="min-h-screen bg-background">
       <Header />
 
+     
       <main>
         {/* Hero Section */}
         <section className="bg-secondary/50 py-16 md:py-24">

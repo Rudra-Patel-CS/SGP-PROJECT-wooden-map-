@@ -225,6 +225,9 @@ export default function AdminProductsPage() {
         setSuccess('Product permanently deleted!')
         fetchProducts()
         setTimeout(() => setSuccess(null), 3000)
+      } else {
+        const data = await res.json()
+        setError(data.error || 'Failed to permanently delete product')
       }
     } catch {
       setError('Failed to permanently delete product')
